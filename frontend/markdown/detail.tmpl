@@ -1,0 +1,78 @@
+<template id="template">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item active" aria-current="page">
+                <a :href="'/markdown/list?category=' + this.category">{{category}}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{title}}</li>
+
+        </ol>
+    </nav>
+    <div id="markdown"></div>
+    <hr>
+    <div style="margin: 10px auto;text-align: center;">
+        <button class="btn btn-primary btn-sm" @click="edit" style="margin-right: 20px;">修改</button>
+        <button class="btn btn-danger btn-sm" @click="deleteMarkdown">删除</button>
+    </div>
+</template>
+
+<script>
+    window.VueObject = {
+        data() {
+            let list = []
+            return {
+                id: 0,
+                content: '',
+                title: '',
+                category: '',
+            }
+        },
+        template: '#template',
+        async mounted() {
+            this.id = getQuery('id', 0)
+            this.getMarkdown()
+        },
+        methods: {
+            async getMarkdown() {
+                let result = await axios.post('/api/database/query/default/content', {
+                    where: {
+                        id: this.id,
+                    },
+                    page: 1,
+                    page_size: 1000,
+                })
+                if (result.data.data.length < 1) {
+                    return
+                }
+                this.content = result.data.data[0].content
+                this.title = result.data.data[0].title
+                this.category = result.data.data[0].category
+                document.title = result.data.data[0].title
+                initMarkdownPreview('markdown', this.content)
+            },
+            edit() {
+                windowRedirect('/markdown/edit', {
+                    'id': this.id,
+                })
+            },
+            deleteMarkdown() {
+                bootbox.confirm("确认删除`" + this.title + "`？", async (result) => {
+                    if (!result) {
+                        return
+                    }
+                    result = await axios.post('/api/database/single_delete/default/content/' + this.id)
+                    if (result.data.code < 0) {
+                        bootbox.alert(result.data.message)
+                    } else {
+                        bootbox.alert("删除成功", () => {
+                            windowRedirect('/markdown/list', {
+                                'category': this.category,
+                            })
+                        })
+                    }
+                })
+            }
+        }
+    }
+
+</script>

@@ -1,0 +1,117 @@
+<template id="template">
+    <div class="row " style="margin: 10px 0;">
+        <div class="col-md-6">
+            <input type="text" class="form-control" placeholder="请输入标题" v-model="title">
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary" @click="finishUpdateMarkdown">修改&退出</button>
+            <button class="btn btn-primary" @click="saveMarkdown" style="margin-left:10px">保存</button>
+        </div>
+    </div>
+    <div class="row " style="margin: 10px 0px; padding-left: 15px;">
+        <template v-for="(item, i) in categoryList">
+            <label class="radio-inline">
+                <input type="radio" name="category" :value="item" v-model="category"
+                    @change="selectClassify(item)">{{item}}
+            </label>
+        </template>
+        <a class="btn btn-link btn-sm" @click="addCategory()">
+            新增分类
+        </a>
+    </div>
+    <div id="markdown"></div>
+</template>
+
+<script>
+    window.VueObject = {
+        data() {
+            let list = []
+            return {
+                id: 0,
+                content: '',
+                title: '',
+                category: '',
+                categoryList: [],
+            }
+        },
+        template: '#template',
+        async mounted() {
+            this.getCategoryList()
+            this.id = getQuery('id', 0)
+            this.getMarkdown()
+        },
+        methods: {
+            async getCategoryList() {
+                let result = await axios.post('/api/database/distinct/default/content/category', {
+                    where: {
+                        content_type: 'markdown'
+                    }
+                })
+                this.categoryList = result.data.data
+            },
+            async addCategory() {
+                bootbox.prompt("请输入分类", (result) => {
+                    if (result == null) {
+                        return true
+                    }
+                    if (result.length < 1) {
+                        return false
+                    }
+                    this.categoryList.push(result)
+                    this.category = result
+                })
+            },
+            async getMarkdown() {
+                let result = await axios.post('/api/database/query/default/content', {
+                    where: {
+                        id: this.id,
+                    },
+                    page: 1,
+                    page_size: 1000,
+                })
+                if (result.data.data.length < 1) {
+                    return
+                }
+                this.content = result.data.data[0].content
+                this.title = result.data.data[0].title
+                this.category = result.data.data[0].category
+                initMarkdownEditor("markdown", this.content, (value) => {
+                    this.content = value
+                })
+            },
+            async saveMarkdown() {
+                await this.updateMarkdown()
+                bootbox.alert('保存成功')
+            },
+            async updateMarkdown() {
+                let data = {
+                    title: this.title,
+                    content: this.content,
+                    category: this.category,
+                    modify_at: dayjs().unix(),
+                }
+                if (this.title.trim().length < 1) {
+                    bootbox.alert('请输入标题')
+                    return
+                }
+                if (this.category.trim().length < 1) {
+                    bootbox.alert('请选择分类')
+                    return
+                }
+                let result = await axios.post('/api/database/single_update/default/content/' + this.id, data)
+                if (result.data.code != 0) {
+                    bootbox.alert(result.data.message)
+                    return
+                }
+            },
+            async finishUpdateMarkdown() {
+                await this.updateMarkdown()
+                bootbox.alert('修改成功', () => {
+                    windowRedirect('/markdown/detail', {
+                        'id': this.id,
+                    })
+                })
+            }
+        }
+    }
+</script>

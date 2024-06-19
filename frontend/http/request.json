@@ -1,0 +1,33 @@
+{
+    "title": "Http请求",
+    "page_data" : [
+        {
+            "name" : "获取Work数据",
+            "url" : "http://127.0.0.1/__proxy__/gmeta/ent_work_v1_meta",
+            "method" : "GET",
+            "params" : {
+                "work_id" : 122
+            }
+        },
+        {
+            "name" : "更新Work",
+            "url" : "http://127.0.0.1/__proxy__/gmeta/ent_work_v1_modify",
+            "method" : "GET",
+            "params" : {
+                "work_id" : 122,
+                "title_picture_url" : "url"
+            }
+        },
+        {
+            "name" : "更新Custom",
+            "url" : "http://127.0.0.1/__proxy__/gmeta/ent_custom_v1_modify",
+            "method" : "POST",
+            "params" : {
+                "resource_code" : "RESOURCE_CODE",
+                "title_picture_url" : "url",
+                "initial" : "{}",
+                "name" : "xxx"
+            }
+        }
+    ]
+}

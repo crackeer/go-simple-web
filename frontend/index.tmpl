@@ -1,0 +1,54 @@
+<template id="template">
+    
+    <h1 class="pt-3">Hello，world！！！</h1>
+    <hr />
+    <div class="container text-center">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <a href="/markdown/create" class="thumbnail" style="padding: 20px; font-size: 18px;">
+                            写文档
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <a href="/bookmark/list" class="thumbnail" style="padding: 20px; font-size: 18px;">
+                            管理书签
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <a href="/code/create" class="thumbnail" style="padding: 20px; font-size: 18px;">
+                            代码片段
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+<script>
+    window.VueObject = {
+        data() {
+            let list = []
+            return {
+                id: 0,
+                content: '',
+                title: '',
+                classify: '',
+            }
+        },
+        template: '#template',
+        async mounted() {
+        },
+        methods: {
+        }
+    }
+</script>

@@ -1,0 +1,120 @@
+<template id="template">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="panel panel-default">
+                <div class="panel-heading">预置API列表</div>
+                <ul class="list-group">
+                    <template v-for="(item, i) in this.dataList">
+                        <a class="list-group-item" href="#" @click="selectAPI(item)">{{item.name}}</a>
+                    </template>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="form-horizontal">
+                <div class="form-group">
+                    <label for="url" class="col-sm-2 control-label">URL</label>
+                    <div class="col-sm-10">
+                        <input type="email" class="form-control" placeholder="url地址，例如：http://api.baidu.com/api/search"
+                            v-model="url">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="url" class="col-sm-2 control-label">Method</label>
+                    <div class="col-sm-10">
+                        <label class="radio-inline">
+                            <input type="radio" name="inlineRadioOptions" id="inlineRadio1" value="GET"
+                                v-model="method">GET
+                        </label>
+                        <label class="radio-inline">
+                            <input type="radio" name="inlineRadioOptions" id="inlineRadio2" value="POST"
+                                v-model="method">POST
+                        </label>
+                        <label class="radio-inline">
+                            <input type="radio" name="inlineRadioOptions" id="inlineRadio3" value="PUT"
+                                v-model="method">PUT
+                        </label>
+                        <label class="radio-inline">
+                            <input type="radio" name="inlineRadioOptions" id="inlineRadio3" value="DELETE"
+                                v-model="method">DELETE
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="params" class="col-sm-2 control-label">参数</label>
+                    <div class="col-sm-10">
+                        <div id="params" style="height: 250px;"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="header" class="col-sm-2 control-label">header</label>
+                    <div class="col-sm-10">
+                        <div id="header" style="height: 250px;"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <button type="submit" class="btn btn-default" @click="doRequest">请求</button>
+                    </div>
+                </div>
+            </div>
+            <hr />
+            <h3>输出</h3>
+            <div id="output" style="height: 300px;"></div>
+        </div>
+    </div>
+</template>
+<script>
+    var paramJsonEditor = null
+    var headerJsonEditor = null
+    var outputJsonEditor = null
+    window.VueObject = {
+        data() {
+            let list = []
+            return {
+                dataList: window.PageData,
+                url: '',
+                method: 'GET',
+                params: {},
+                headers: {},
+            }
+        },
+        template: '#template',
+        async mounted() {
+            paramJsonEditor = initJSONEditor('params', '{}')
+            headerJsonEditor = initJSONEditor('header', '{}')
+            outputJsonEditor = initJSONEditor('output', '{}')
+        },
+        methods: {
+            selectAPI(item) {
+                if (item.method != undefined) {
+                    this.method = item.method
+                }
+                if (item.url != undefined) {
+                    this.url = item.url
+                }
+                if (item.params != undefined) {
+                    paramJsonEditor.set(item.params)
+                }
+                if (item.headers != undefined) {
+                    headerJsonEditor.set(item.headers)
+                }
+            },
+            async doRequest() {
+                if (this.url.length < 1 || this.method.length < 1) {
+                    return
+                }
+                let result = await httpRequest(this.method, this.url, paramJsonEditor.get(), headerJsonEditor.get())
+                if(result.code != 0) {
+                    bootbox.alert(result.message)
+                    return
+                }
+                try {
+                    let data = JSON.parse(result.data)
+                    outputJsonEditor.set(data)
+                } catch(e) {
+                }
+            },
+        }
+    }
+</script>

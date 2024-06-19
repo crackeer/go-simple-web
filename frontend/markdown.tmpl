@@ -1,0 +1,23 @@
+<template id="template">
+     <div id="markdown"></div>
+</template>
+<script>
+    window.VueObject = {
+        data() {
+            return {
+                content: "",
+                mdName: "index"
+            }
+        },
+        template: '#template',
+        async mounted() {
+            this.getDocument()
+        },
+        methods: {
+            async getDocument() {
+                let result = await axios.get(window.location.pathname.replace('.mdx', '.md'))
+                initMarkdownPreview('markdown', result.data)
+            }
+        }
+    }
+</script>

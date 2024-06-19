@@ -1,0 +1,186 @@
+<template id="template">
+    <div class="well">
+        <p>{{dir}}  <button class="btn btn-sm btn-link" @click="showCreateDir()" >新建文件夹</button></p>
+        <input type="file" multiple @change="uploadFile"/>
+    </div>
+    <table class="table table-bordered table-condensed">
+        <thead>
+            <tr>
+                <th>名字</th>
+                <th>大小</th>
+                <th>修改</th>
+                <th>操作</th>
+            </tr>
+        <tbody>
+            <tr>
+                <td>
+                    ..
+                </td>
+                <td>
+                    .
+                </td>
+                <td>
+                    .
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-link" @click="goUpper">
+                        上一级
+                    </button>
+                </td>
+            </tr>
+            <tr v-for="(item, i) in this.fileList">
+                <td v-if="item.is_dir">
+                    <a :href="'/file/manage?dir=' + item.path" v-if="item.is_dir">
+                        {{item.name}}
+                    </a>
+                </td>
+                <td v-else>
+                    {{item.name}}
+                </td>
+                <td>
+                    {{item.size}}
+                </td>
+                <td>
+                    {{item.modify}}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-link" @click="zipFile(item)" v-if="item.is_dir">zip压缩</button>
+                    <button class="btn btn-sm btn-link" @click="download(item)" v-if="!item.is_dir">下载</button>
+                    <button class="btn btn-sm btn-link" @click="handleDelete(item)">删除</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="modal fade" id="loading" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+        data-backdrop='static'>
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="myModalLabel">提示</h4>
+                </div>
+                <div class="modal-body">
+                    正在上传中，请稍后...
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+<script>
+    document.title = "文件上传/ 下载"
+    window.VueObject = {
+        data() {
+            let list = []
+            return {
+                dir: '/root/',
+                fileList: [],
+            }
+        },
+        template: '#template',
+        async mounted() {
+            this.dir = getQuery('dir', '/root')
+            await this.getFileList()
+        },
+        methods: {
+            async getFileList() {
+                let result = await axios.get('/api/file/list?dir=' + this.dir)
+               
+                for(let i = 0; i < result.data.data.length; i++) {
+                    result.data.data[i].size = filesize(parseInt(result.data.data[i].size), {standard: "jedec"})
+                }
+                this.fileList = result.data.data.sort(function (a, b) {
+                    if (a.is_dir && !b.is_dir) {
+                        return -1
+                    }
+                    return 1
+                })
+            },
+            download(item) {
+                window.open('/api/file/download?file=' + item.path, '_blank')
+            },
+            async goUpper() {
+                if (this.dir == '/') {
+                    return
+                }
+                let parts = this.dir.split('/')
+                parts.pop()
+                let parentDir = parts.join('/')
+                if (parentDir.length < 1) {
+                    parentDir = '/'
+                }
+                window.location.href = window.location.pathname + "?dir=" + parentDir
+            },
+            async uploadFile(event) {
+                $('#loading').modal('show');
+                const files = event.target.files;
+                for (const file of files) {
+                    try {
+                        await this.doUploadFile(file)
+                    } catch (e) {
+                        alert(e.message)
+                    }
+                }
+                $('#loading').modal('hide');
+                bootbox.alert("上传成功", () => {
+                    this.getFileList()
+                })
+            },
+            async doUploadFile(file) {
+                const formData = new FormData()
+                formData.append('file', file)
+                return await axios.post('/api/file/upload?dir=' + this.dir, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                })
+            },
+            zipFile(item) {
+                bootbox.confirm('确认zip压缩该文件夹么？请保证有足够空间', (result) => {
+                    if (!result) {
+                        return
+                    }
+                    axios.get('/api/file/zip?dir=' + item.path).then((result) => {
+                        if (result.data.code < 0) {
+                            bootbox.alert(result.data.message)
+                        } else {
+                            bootbox.alert("打包中，文件为：" + result.data.data.dest + "，请等待，稍后查看")
+                        }
+                    })
+                })
+            },
+            handleDelete(item) {
+                bootbox.confirm('确认删除该文件？无法恢复', (result) => {
+                    if (!result) {
+                        return
+                    }
+                    axios.get('/api/file/delete?file=' + item.path).then((result) => {
+                        if (result.data.code < 0) {
+                            bootbox.alert(result.data.message)
+                        } else {
+                            bootbox.alert("删除成功", () => {
+                               this.getFileList()
+                            })
+                        }
+                    })
+                })
+            },
+            showCreateDir() {
+                bootbox.prompt("请输入文件夹名字", (result) => {
+                    if(result== null || result == undefined) return
+                    if(result.trim().length < 1) {
+                        return
+                    }
+                    axios.get('/api/file/mkdirall?dir=' + this.dir + "/" + result.trim()).then((result) => {
+                        if (result.data.code < 0) {
+                            bootbox.alert(result.data.message)
+                        } else {
+                            bootbox.alert("创建成功", () => {
+                                this.getFileList()
+                            })
+                        }
+                    })
+                });
+            }
+
+        }
+    }
+</script>

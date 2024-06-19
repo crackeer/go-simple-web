@@ -1,0 +1,149 @@
+<template id="template">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>JSON列表</strong>
+                </div>
+                <ul class="list-group">
+                    <template v-for="(item, i) in this.list">
+                        <a class="list-group-item" :class="{'active' : id == item.id}" href="javascript:;"
+                            @click="selectData(item)">{{item.title}}</a>
+                    </template>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div id="jsoneditor" style="width: 100%; height: calc(100vh - 190px);"></div>
+            <div style=" text-align: center;margin-top:20px">
+                <button type="button" @click="saveJSON" class="btn btn-primary">另存为</button>
+                <button type="button" @click="updateJSON" class="btn btn-primary" v-if="id > 0"
+                    style="margin-left:10px">更新</button>
+                <button type="button" @click="deleteJSON" class="btn btn-danger" style="margin-left:10px"
+                    v-if="id > 0">删除</button>
+                <button type="button" @click="json2Go" class="btn btn-primary" style="margin-left:10px">转Go
+                    Struct</button>
+                <button type="button" style="margin-left:10px" @click="json2String"
+                    class="btn btn-primary">转字符串</button>
+                <button type="button" style="margin-left:10px" @click="clear" class="btn btn-primary">Clear</button>
+            </div>
+        </div>
+    </div>
+
+</template>
+<script defer>
+    var jsonEditor = null;
+    window.VueObject = {
+        data() {
+            return {
+                id: 0,
+                content: '',
+                list: [],
+            }
+        },
+        template: '#template',
+        async mounted() {
+            this.getList()
+            jsonEditor = initJSONEditor("jsoneditor", '{}')
+        },
+        methods: {
+            async getList() {
+                let where = {
+                    content_type: 'json'
+                }
+
+                let result = await axios.post('/api/database/query/default/content', {
+                    where: where,
+                    page: 1,
+                    page_size: 1000,
+                })
+                for (let i = 0; i < result.data.data.length; i++) {
+                    result.data.data[i]['modify_at'] = formatUnix(result.data.data[i]['modify_at'])
+                    result.data.data[i]['create_at'] = formatUnix(result.data.data[i]['create_at'])
+                }
+
+                this.list = result.data.data
+            },
+            async deleteJSON() {
+                bootbox.confirm("确认删除该JSON?", async (result) => {
+                    if (!result) {
+                        return
+                    }
+                    let data = {
+                        content_type: 'json',
+                        title: result,
+                        category: '',
+                        content: JSON.stringify(jsonEditor.get()),
+                    }
+                    result = await axios.post('/api/database/single_delete/default/content/' + this.id)
+                    if (result.data.code != 0) {
+                        bootbox.alert(result.data.message)
+                        return
+                    }
+                    bootbox.alert('删除成功', () => {
+                        window.location.reload()
+                    })
+                })
+            },
+            selectData(item) {
+                try {
+                    this.id = item.id
+                    let value = JSON.parse(item.content)
+                    jsonEditor.set(value)
+                } catch (e) {
+                }
+            },
+            async saveJSON() {
+                bootbox.prompt("请输入名字", async (result) => {
+                    if (result == null) {
+                        return
+                    }
+                    let data = {
+                        content_type: 'json',
+                        title: result,
+                        category: '',
+                        content: JSON.stringify(jsonEditor.get()),
+                    }
+                    result = await axios.post('/api/database/create/default/content', data)
+                    if (result.data.code != 0) {
+                        bootbox.alert(result.data.message)
+                        return
+                    }
+                    bootbox.alert('创建成功', () => {
+                        window.location.reload()
+                    })
+                })
+            },
+            async updateJSON() {
+                let data = {
+                    content: JSON.stringify(jsonEditor.get()),
+                }
+                result = await axios.post('/api/database/single_update/default/content/' + this.id, data)
+                if (result.data.code != 0) {
+                    bootbox.alert(result.data.message)
+                    return
+                }
+                bootbox.alert('更新成功', () => {
+                    this.getList()
+                })
+            },
+            async json2Go() {
+                let result = jsonToGo(JSON.stringify(jsonEditor.get()), null, null, false)
+                let dialog = bootbox.dialog({
+                    title: '转换结果',
+                    message: '<textarea class="form-control" rows=27>' + result.go + '</textarea>',
+                    closeButton: true,
+                    size: 'large'
+                });
+            },
+            async json2String() {
+                jsonEditor.set(JSON.stringify(jsonEditor.get()))
+            },
+            clear() {
+                jsonEditor.set({})
+                this.id = 0
+            }
+        }
+    }
+
+</script>
