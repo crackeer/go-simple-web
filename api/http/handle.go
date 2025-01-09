@@ -20,23 +20,18 @@ func HandleHttpProxy(ctx *gin.Context) {
 			headers[strings.TrimPrefix(key, "X-Proxy-")] = strings.Join(value, "")
 		}
 	}
-	var baseURL string
-	if value, ok := headers["Host"]; ok {
-		baseURL = value
-		delete(headers, "Host")
-	}
-	if len(baseURL) < 1 {
-		util.Failure(ctx, -2, "X-Proxy-Host not set")
-		return
-	}
-
 	if _, ok := headers["Content-Type"]; !ok {
 		if value, ok := ctx.Request.Header["Content-Type"]; ok {
 			headers["Content-Type"] = strings.Join(value, "")
 		}
 	}
 
-	path := ctx.Param("urlpath")
+	var schema string = "http"
+	if value, ok := headers["X-Config-Schema"]; ok {
+		schema = value
+	}
+
+	baseURL := schema + "://" + ctx.Param("urlpath")
 	request := resty.New().SetTimeout(30 * time.Second).SetBaseURL(baseURL).R().SetHeaders(headers)
 
 	if body, err := ctx.GetRawData(); err == nil {
@@ -48,7 +43,7 @@ func HandleHttpProxy(ctx *gin.Context) {
 			request = request.SetQueryParam(k, strings.Join(v, ","))
 		}
 	}
-	response, err := request.Execute(ctx.Request.Method, path)
+	response, err := request.Execute(ctx.Request.Method, "")
 	if err != nil {
 		util.Failure(ctx, -2, err.Error())
 		return

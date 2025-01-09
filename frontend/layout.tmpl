@@ -35,14 +35,11 @@
         window.VueObject = null
         window.VueMount = "#app"
         window.Vm = null
-        window.PageData = {[{.page_data }]}
+        window.Config = {[{.config }]}
+        window.Meta = {[{.meta }]}
 
         document.addEventListener("DOMContentLoaded", async () => {
-            if (typeof startWork == "function") {
-                startWork()
-            }
             let path = window.location.pathname
-
             $('#navbar-collapse-id').find(`li a[href="${path}"]`).parent().addClass('active')
             setTimeout(() => {
                 if (window.VueObject != null) {
@@ -54,11 +51,11 @@
 </head>
 
 <body>
-    {[{if not .disable_nav}]}
+    {[{if not .meta.without_nav}]}
        {[{ partial "navigation"}]}
     {[{ end }]}
 
-    {[{ if .title }]}
+    {[{ if .meta.title }]}
         <p style="border-bottom: 1px solid gainsboro;padding-bottom: 10px;">
             <strong style="font-size: 18px;">{[{.title}]}</strong>
         </p>

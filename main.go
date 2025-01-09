@@ -19,32 +19,10 @@ import (
 	rollRender "github.com/unrolled/render"
 )
 
-const tmplExtension = ".tmpl"
-const tmplDataExtension = ".json"
-
 var (
 	renderer   *rollRender.Render
 	fileServer http.Handler
 )
-
-func initRender(dir, layout string) {
-	renderer = rollRender.New(rollRender.Options{
-		Directory:  dir,                           // Specify what path to load the templates from.
-		FileSystem: &rollRender.LocalFileSystem{}, // Specify filesystem from where files are loaded.
-		Layout:     layout,                        // Specify a layout template. Layouts can call {{ yield }} to render the current template or {{ partial "css" }} to render a partial from the current template.
-		Extensions: []string{".tmpl"},             // Specify extensions to load for templates.
-		Delims: rollRender.Delims{
-			Left:  "{[{",
-			Right: "}]}",
-		},
-		IsDevelopment:               true,
-		Asset:                       nil,
-		AssetNames:                  nil,
-		RenderPartialsWithoutPrefix: true,
-	})
-
-	fileServer = http.StripPrefix("", http.FileServer(http.Dir(dir)))
-}
 
 func main() {
 	if err := container.Initialize(); err != nil {
@@ -80,39 +58,53 @@ func main() {
 	router.Run(fmt.Sprintf(":%d", cfg.Port))
 }
 
+func initRender(dir, layout string) {
+	renderer = rollRender.New(rollRender.Options{
+		Directory:  dir,                           // Specify what path to load the templates from.
+		FileSystem: &rollRender.LocalFileSystem{}, // Specify filesystem from where files are loaded.
+		Layout:     layout,
+		Extensions: []string{".tmpl"}, // Specify extensions to load for templates.
+		Delims: rollRender.Delims{
+			Left:  "{[{",
+			Right: "}]}",
+		},
+		IsDevelopment:               true,
+		Asset:                       nil,
+		AssetNames:                  nil,
+		RenderPartialsWithoutPrefix: true,
+	})
+
+	fileServer = http.StripPrefix("", http.FileServer(http.Dir(dir)))
+}
+
 func createStaticHandler(dir string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		file := strings.TrimLeft(ctx.Request.URL.Path, "/")
-		if len(file) < 1 {
-			file = "index"
-		}
-
-		if isMarkdown(file) {
-			file = "markdown"
-		}
-
-		fullPath := filepath.Join(dir, file)
+		path := strings.TrimLeft(ctx.Request.URL.Path, "/")
+		fullPath := filepath.Join(dir, path)
 		if fileExists(fullPath) {
 			fileServer.ServeHTTP(ctx.Writer, ctx.Request)
 			return
 		}
-		if !fileExists(fullPath + tmplExtension) {
-			ctx.String(http.StatusNotFound, "page not found")
-			ctx.Abort()
-			return
-		}
-		data := map[string]interface{}{}
-		if fileExists(fullPath + tmplDataExtension) {
-			if bytes, err := os.ReadFile(fullPath + tmplDataExtension); err == nil {
-				json.Unmarshal(bytes, &data)
-			}
-		}
-		renderer.HTML(ctx.Writer, http.StatusOK, file, data)
-	}
-}
+		pageName := filepath.Join(path, "page")
 
-func isMarkdown(value string) bool {
-	return strings.HasSuffix(value, ".mdx")
+		configFile := filepath.Join(fullPath, "config.json")
+		metaFile := filepath.Join(fullPath, "meta.json")
+
+		config := map[string]interface{}{}
+		if bytes, err := os.ReadFile(configFile); err == nil {
+			json.Unmarshal(bytes, &config)
+		}
+
+		meta := map[string]interface{}{}
+		if bytes, err := os.ReadFile(metaFile); err == nil {
+			json.Unmarshal(bytes, &meta)
+		}
+
+		renderer.HTML(ctx.Writer, http.StatusOK, strings.ReplaceAll(pageName, "\\", "/"), map[string]interface{}{
+			"config": config,
+			"meta":   meta,
+		})
+	}
 }
 
 func fileExists(filename string) bool {
