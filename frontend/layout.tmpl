@@ -41,6 +41,9 @@
         document.addEventListener("DOMContentLoaded", async () => {
             let path = window.location.pathname
             $('#navbar-collapse-id').find(`li a[href="${path}"]`).parent().addClass('active')
+            {[{ if .meta.active_tab }]}
+                $('#navbar-collapse-id').find('li a[href="{[{ html .meta.active_tab}]}"]').parent().addClass('active')
+            {[{ end }]}
             setTimeout(() => {
                 if (window.VueObject != null) {
                     window.Vm = mountVueObject(window.VueObject, window.VueMount)
@@ -57,7 +60,7 @@
 
     {[{ if .meta.title }]}
         <p style="border-bottom: 1px solid gainsboro;padding-bottom: 10px;">
-            <strong style="font-size: 18px;">{[{.title}]}</strong>
+            <strong style="font-size: 18px;">{[{.meta.title}]}</strong>
         </p>
     {[{ end }]}
     <div id="app"></div>
