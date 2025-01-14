@@ -1,0 +1,15 @@
+[Unit]
+Description=golang simple web service
+
+[Service]
+Type=simple
+RemainAfterExit=yes
+WorkingDirectory=/usr/local/go-simple-web
+ExecStart=/usr/local/go-simple-web/go-simple-web
+RestartSec=10s
+Restart=always
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
